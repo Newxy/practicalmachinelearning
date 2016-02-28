@@ -1,0 +1,55 @@
+---
+title: "Quality Prediction of Barbell Lift Exercises"
+author: "yx"
+date: "February 27, 2016"
+output: html_document
+---
+
+## Introduction
+
+The goal of this project is to develop a model to predict the quality of barbell lift exercises based on the data of Weight Lifting Exercise Dataset. 
+
+## Data Import and Processing
+
+As the first step of this project, the Weight Lifting Exercise training and testing dataset were imported. The variables without variability or mostly missing were removed based on a close examination of the training and testing data. Only the useful features were extracted and used in the later analysis.
+
+```{r, echo=TRUE, cache=TRUE}
+raw_training<-read.csv("./pml-training.csv")
+raw_testing<-read.csv("./pml-testing.csv")
+
+myvars1 <- grepl( "^kurtosis", names(raw_training)) | grepl( "^max", names(raw_training)) | grepl( "^min", names(raw_training)) | grepl( "^skewness", names(raw_training)) | grepl( "^amplitude", names(raw_training)) | grepl( "^var", names(raw_training)) | grepl( "^avg", names(raw_training)) | grepl( "^stddev", names(raw_training)) | grepl( "^user", names(raw_training)) | grepl( "^cvtd", names(raw_training)) | grepl( "X", names(raw_training)) | grepl( "^raw", names(raw_training)) | grepl( "new_window", names(raw_training))
+training <- raw_training[!myvars1]
+
+myvars2 <- grepl( "^kurtosis", names(raw_testing)) | grepl( "^max", names(raw_testing)) | grepl( "^min", names(raw_testing)) | grepl( "^skewness", names(raw_testing)) | grepl( "^amplitude", names(raw_testing)) | grepl( "^var", names(raw_testing)) | grepl( "^avg", names(raw_testing)) | grepl( "^stddev", names(raw_testing)) | grepl( "^user", names(raw_testing)) | grepl( "^cvtd", names(raw_testing)) | grepl( "X", names(raw_testing)) | grepl( "problem_id", names(raw_testing)) | grepl( "^raw", names(raw_testing)) | grepl( "new_window", names(raw_testing))
+testing <- raw_testing[!myvars2]
+```
+
+## Prediction Model Development
+
+In this project, random forest method combined with 5-fold cross validation was applied to construct the prediction model. The reason to select random forest method as it can do feature selection. 
+
+```{r, echo=TRUE, cache=TRUE, warning=FALSE}
+library(caret)
+library(doParallel)
+
+fitControl<-trainControl(method="cv", number=5)
+
+c1<-makeCluster(detectCores())
+registerDoParallel(c1)
+
+set.seed(1234)
+modFit1<-train(classe~., method="rf", data=training, trControl=fitControl, metric="Kappa",importance=TRUE)
+
+stopCluster(c1)
+
+print(modFit1)
+
+# Final model
+print(modFit1$finalModel)
+confusionMatrix(predict(modFit1,training), training$classe)
+
+# Prediction on test data
+predict(modFit1,testing)
+```
+
+As shown in the above final model, the accuracy of developed model based on the training data is about 99.8%.
